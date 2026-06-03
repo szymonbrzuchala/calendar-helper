@@ -151,12 +151,34 @@
     <section class="card">
       <h1>Generator wydarzeń do kalendarza</h1>
       <p>Wklej linię z terminarza, a aplikacja przygotuje wydarzenie trwające 2 godziny oraz plik ICS z przypomnieniem 2 godziny przed startem.</p>
-      <p class="muted">Działa jako statyczna strona, więc nadaje się do wrzucenia na GitHub Pages i używania także z telefonu.</p>
+      <p class="muted">Działa jako statyczna strona, nadaje się do używania na komputerze a także z telefonu.</p>
     </section>
 
     <section class="card">
       <label for="rawInput">Wklej dane wydarzenia</label>
-      <textarea id="rawInput" placeholder="2026-06-19 19:00	Gospodarz	 Gość	Adres 2, Wroclaw">2026-06-19 19:00	Gospodarz	Gość	Adres 2, Wroclaw</textarea>
+      <textarea id="rawInput" placeholder="Format 1:
+2026-06-19 19:00	Gospodarz	Gość	Adres 2, Wroclaw
+
+Format 2:
+Data
+2026-06-19 19:00
+Drużyna gospodarzy
+Gospodarz
+Drużyna gości
+Gość
+Miejsce
+Adres 2, Wroclaw">Format 1:
+2026-06-19 19:00	Gospodarz	Gość	Adres 2, Wroclaw
+
+Format 2:
+Data
+2026-06-19 19:00
+Drużyna gospodarzy
+Gospodarz
+Drużyna gości
+Gość
+Miejsce
+Adres 2, Wroclaw</textarea>
 
       <div class="grid" style="margin-top:14px;">
         <div>
