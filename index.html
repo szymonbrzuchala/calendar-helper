@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dodawanie wydarzeń do kalendarza</title>
+  <style>
+    :root {
+      --bg: #f7f6f2;
+      --surface: #ffffff;
+      --surface-2: #f1efe9;
+      --text: #1f1f1a;
+      --muted: #6e6c66;
+      --border: #d8d4cb;
+      --primary: #01696f;
+      --primary-hover: #0c4e54;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      line-height: 1.1;
+    }
+
+    p { margin: 0 0 12px; }
+    .muted { color: var(--muted); }
+
+    textarea, input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 8px;
+      font-weight: 600;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    button, a.button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      min-height: 48px;
+      font: inherit;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .primary:hover { background: var(--primary-hover); }
+
+    .secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .preview {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--surface-2);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .row strong {
+      display: inline-block;
+      min-width: 115px;
+    }
+
+    .hint {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    .error {
+      margin-top: 14px;
+      color: #9b1c39;
+      font-weight: 600;
+    }
+
+    code {
+      background: #ece8df;
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Generator wydarzeń do kalendarza</h1>
+      <p>Wklej linię z terminarza, a aplikacja przygotuje wydarzenie trwające 2 godziny oraz plik ICS z przypomnieniem 2 godziny przed startem.</p>
+      <p class="muted">Działa jako statyczna strona, więc nadaje się do wrzucenia na GitHub Pages i używania także z telefonu.</p>
+    </section>
+
+    <section class="card">
+      <label for="rawInput">Wklej dane wydarzenia</label>
+      <textarea id="rawInput" placeholder="2026-06-19 19:00	FORZA WROCŁAW	- WKS II ŚLĄSK	ul. Lotnicza 72, Wrocław">2026-06-19 19:00	FORZA WROCŁAW	- WKS II ŚLĄSK	ul. Lotnicza 72, Wrocław</textarea>
+
+      <div class="grid" style="margin-top:14px;">
+        <div>
+          <label for="description">Dodatkowy opis (opcjonalnie)</label>
+          <input id="description" type="text" placeholder="np. Mecz ligowy, zbiórka 30 min wcześniej" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="parseBtn">Przygotuj wydarzenie</button>
+        <a class="button secondary" id="googleBtn" href="#">Otwórz w Google Calendar</a>
+        <button class="secondary" id="icsBtn">Pobierz ICS z reminderem 2h</button>
+      </div>
+
+      <div class="hint">Obsługiwany format: <code>data godzina[TAB]gospodarz[TAB]- gość[TAB]adres</code>. Jeśli używasz telefonu, możesz też wkleić całość w jednej linii.</div>
+      <div id="error" class="error" aria-live="polite"></div>
+
+      <div id="preview" class="preview" hidden>
+        <div class="row"><strong>Tytuł:</strong> <span id="previewTitle"></span></div>
+        <div class="row"><strong>Start:</strong> <span id="previewStart"></span></div>
+        <div class="row"><strong>Koniec:</strong> <span id="previewEnd"></span></div>
+        <div class="row"><strong>Adres:</strong> <span id="previewLocation"></span></div>
+        <div class="row"><strong>Reminder:</strong> 2 godziny przed wydarzeniem</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const rawInput = document.getElementById('rawInput');
+    const descriptionInput = document.getElementById('description');
+    const parseBtn = document.getElementById('parseBtn');
+    const googleBtn = document.getElementById('googleBtn');
+    const icsBtn = document.getElementById('icsBtn');
+    const errorBox = document.getElementById('error');
+    const preview = document.getElementById('preview');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewStart = document.getElementById('previewStart');
+    const previewEnd = document.getElementById('previewEnd');
+    const previewLocation = document.getElementById('previewLocation');
+
+    let currentEvent = null;
+
+    function escapeIcs(text) {
+      return String(text || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+    }
+
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function toGoogleDate(date) {
+      return date.getFullYear() +
+        pad(date.getMonth() + 1) +
+        pad(date.getDate()) + 'T' +
+        pad(date.getHours()) +
+        pad(date.getMinutes()) +
+        pad(date.getSeconds());
+    }
+
+    function toIcsDate(date) {
+      return toGoogleDate(date);
+    }
+
+    function formatLocal(date) {
+      return new Intl.DateTimeFormat('pl-PL', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    }
+
+    function parseLine(input) {
+      const text = input.trim();
+      if (!text) {
+        throw new Error('Wklej dane wydarzenia.');
+      }
+
+      let parts = text.split('\t').map(v => v.trim()).filter(Boolean);
+
+      if (parts.length < 4) {
+        const match = text.match(/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+(.+?)\s+(?:-|–|—)\s+(.+?)\s+([^,]+,.+)$/);
+        if (match) {
+          parts = [match[1], match[2], '- ' + match[3], match[4]];
+        }
+      }
+
+      if (parts.length < 4) {
+        throw new Error('Nie udało się rozpoznać formatu. Najlepiej wklej dane z tabulatorami między polami.');
+      }
+
+      const start = new Date(parts[0].replace(' ', 'T'));
+      if (Number.isNaN(start.getTime())) {
+        throw new Error('Niepoprawna data lub godzina. Oczekiwany format: RRRR-MM-DD GG:MM');
+      }
+
+      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      const title = [parts[1], parts[2]].join(' ').replace(/\s+/g, ' ').trim();
+      const location = parts.slice(3).join(' ').trim();
+      const description = descriptionInput.value.trim()
+        ? descriptionInput.value.trim() + '\n\nŹródło: ' + text
+        : 'Źródło: ' + text;
+
+      return { start, end, title, location, description };
+    }
+
+    function buildGoogleUrl(event) {
+      const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: event.title,
+        dates: `${toGoogleDate(event.start)}/${toGoogleDate(event.end)}`,
+        details: event.description,
+        location: event.location
+      });
+      return `https://calendar.google.com/calendar/render?${params.toString()}`;
+    }
+
+    function buildIcs(event) {
+      const uid = `${Date.now()}@calendar-app.local`;
+      const dtstamp = toIcsDate(new Date());
+      return [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Szymon Calendar Helper//PL',
+        'CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtstamp}`,
+        `DTSTART:${toIcsDate(event.start)}`,
+        `DTEND:${toIcsDate(event.end)}`,
+        `SUMMARY:${escapeIcs(event.title)}`,
+        `DESCRIPTION:${escapeIcs(event.description)}`,
+        `LOCATION:${escapeIcs(event.location)}`,
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:Przypomnienie o wydarzeniu',
+        'TRIGGER:-PT120M',
+        'END:VALARM',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+    }
+
+    function refresh() {
+      errorBox.textContent = '';
+      currentEvent = parseLine(rawInput.value);
+      googleBtn.href = buildGoogleUrl(currentEvent);
+      googleBtn.target = '_blank';
+      googleBtn.rel = 'noopener noreferrer';
+
+      previewTitle.textContent = currentEvent.title;
+      previewStart.textContent = formatLocal(currentEvent.start);
+      previewEnd.textContent = formatLocal(currentEvent.end);
+      previewLocation.textContent = currentEvent.location;
+      preview.hidden = false;
+    }
+
+    parseBtn.addEventListener('click', () => {
+      try {
+        refresh();
+      } catch (err) {
+        preview.hidden = true;
+        errorBox.textContent = err.message;
+      }
+    });
+
+    googleBtn.addEventListener('click', (e) => {
+      try {
+        refresh();
+      } catch (err) {
+        e.preventDefault();
+        preview.hidden = true;
+        errorBox.textContent = err.message;
+      }
+    });
+
+    icsBtn.addEventListener('click', () => {
+      try {
+        refresh();
+        const ics = buildIcs(currentEvent);
+        const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const safeName = currentEvent.title
+          .toLowerCase()
+          .replace(/[^a-z0-9ąćęłńóśźż\- ]/gi, '')
+          .replace(/\s+/g, '-')
+          .slice(0, 60) || 'wydarzenie';
+        a.href = url;
+        a.download = `${safeName}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        preview.hidden = true;
+        errorBox.textContent = err.message;
+      }
+    });
+
+    try {
+      refresh();
+    } catch (err) {
+      errorBox.textContent = err.message;
+    }
+  </script>
+</body>
+</html>
