@@ -156,7 +156,7 @@
 
     <section class="card">
       <label for="rawInput">Wklej dane wydarzenia</label>
-      <textarea id="rawInput" placeholder="2026-06-19 19:00	Gospodarz	- Gość	Adres 2, Wroclaw">2026-06-19 19:00	Gospodarz	Gość	Adres 2, Wroclaw</textarea>
+      <textarea id="rawInput" placeholder="2026-06-19 19:00	Gospodarz	 Gość	Adres 2, Wroclaw">2026-06-19 19:00	Gospodarz	- Gość	Adres 2, Wroclaw</textarea>
 
       <div class="grid" style="margin-top:14px;">
         <div>
@@ -171,7 +171,7 @@
         <button class="secondary" id="icsBtn">Pobierz ICS z reminderem 2h</button>
       </div>
 
-      <div class="hint">Obsługiwany format: <code>data godzina[TAB]gospodarz[TAB]gość[TAB]adres</code>. Tytuł wydarzenia zostanie utworzony automatycznie jako <code>gospodarz - gość</code>.</div>
+      <div class="hint">Obsługiwane formaty: <code>data godzina[TAB]gospodarz[TAB]gość[TAB]adres</code> oraz wersja wieloliniowa z polami <code>Data</code>, <code>Drużyna gospodarzy</code>, <code>Drużyna gości</code> i <code>Miejsce</code>. Tytuł wydarzenia zostanie utworzony automatycznie jako <code>gospodarz - gość</code>.</div>
       <div id="error" class="error" aria-live="polite"></div>
 
       <div id="preview" class="preview" hidden>
@@ -240,27 +240,50 @@
         throw new Error('Wklej dane wydarzenia.');
       }
 
-      const parts = text.split('\t').map(v => v.trim());
+      let dateValue = '';
+      let homeTeam = '';
+      let awayTeam = '';
+      let location = '';
 
-      if (parts.length !== 4 || parts.some(v => !v)) {
-        throw new Error('Nie udało się rozpoznać formatu. Użyj dokładnie: data godzina[TAB]gospodarz[TAB]gość[TAB]adres');
+      const lines = text.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
+      const normalized = lines.map(v => v.toLowerCase());
+
+      const dataIndex = normalized.indexOf('data');
+      const homeIndex = normalized.indexOf('drużyna gospodarzy');
+      const awayIndex = normalized.indexOf('drużyna gości');
+      const locationIndex = normalized.indexOf('miejsce');
+
+      const hasLabeledFormat = dataIndex !== -1 && homeIndex !== -1 && awayIndex !== -1 && locationIndex !== -1;
+
+      if (hasLabeledFormat) {
+        dateValue = lines[dataIndex + 1] || '';
+        homeTeam = lines[homeIndex + 1] || '';
+        awayTeam = lines[awayIndex + 1] || '';
+        location = lines[locationIndex + 1] || '';
+      } else {
+        const parts = text.split('\t').map(v => v.trim());
+        if (parts.length !== 4 || parts.some(v => !v)) {
+          throw new Error('Nie udało się rozpoznać formatu. Użyj formatu TAB albo wersji wieloliniowej z polami Data, Drużyna gospodarzy, Drużyna gości, Miejsce.');
+        }
+        [dateValue, homeTeam, awayTeam, location] = parts;
       }
 
-      const start = new Date(parts[0].replace(' ', 'T'));
+      const start = new Date(dateValue.replace(' ', 'T'));
       if (Number.isNaN(start.getTime())) {
         throw new Error('Niepoprawna data lub godzina. Oczekiwany format: RRRR-MM-DD GG:MM');
       }
 
+      if (!homeTeam || !awayTeam || !location) {
+        throw new Error('Brakuje jednej z wymaganych wartości: gospodarz, gość lub adres.');
+      }
+
       const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-      const homeTeam = parts[1].trim();
-      const awayTeam = parts[2].trim();
-      const title = `${homeTeam} - ${awayTeam}`.replace(/\s+/g, ' ').trim();
-      const location = parts.slice(3).join(' ').trim();
+      const title = `${homeTeam.trim()} - ${awayTeam.trim()}`.replace(/\s+/g, ' ').trim();
       const description = descriptionInput.value.trim()
         ? descriptionInput.value.trim() + '\n\nŹródło: ' + text
         : 'Źródło: ' + text;
 
-      return { start, end, title, location, description };
+      return { start, end, title, location: location.trim(), description };
     }
 
     function buildGoogleUrl(event) {
