@@ -156,7 +156,7 @@
 
     <section class="card">
       <label for="rawInput">Wklej dane wydarzenia</label>
-      <textarea id="rawInput" placeholder="2026-06-19 19:00	FORZA WROCŁAW	- WKS II ŚLĄSK	ul. Lotnicza 72, Wrocław">2026-06-19 19:00	FORZA WROCŁAW	- WKS II ŚLĄSK	ul. Lotnicza 72, Wrocław</textarea>
+      <textarea id="rawInput" placeholder="2026-06-19 19:00	Gospodarz	- Gość	Adres 2, Wroclaw">2026-06-19 19:00	Gospodarz	Gość	Adres 2, Wroclaw</textarea>
 
       <div class="grid" style="margin-top:14px;">
         <div>
@@ -171,7 +171,7 @@
         <button class="secondary" id="icsBtn">Pobierz ICS z reminderem 2h</button>
       </div>
 
-      <div class="hint">Obsługiwany format: <code>data godzina[TAB]gospodarz[TAB]- gość[TAB]adres</code>. Jeśli używasz telefonu, możesz też wkleić całość w jednej linii.</div>
+      <div class="hint">Obsługiwany format: <code>data godzina[TAB]gospodarz[TAB]gość[TAB]adres</code>. Tytuł wydarzenia zostanie utworzony automatycznie jako <code>gospodarz - gość</code>.</div>
       <div id="error" class="error" aria-live="polite"></div>
 
       <div id="preview" class="preview" hidden>
@@ -240,17 +240,10 @@
         throw new Error('Wklej dane wydarzenia.');
       }
 
-      let parts = text.split('\t').map(v => v.trim()).filter(Boolean);
+      const parts = text.split('\t').map(v => v.trim());
 
-      if (parts.length < 4) {
-        const match = text.match(/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+(.+?)\s+(?:-|–|—)\s+(.+?)\s+([^,]+,.+)$/);
-        if (match) {
-          parts = [match[1], match[2], '- ' + match[3], match[4]];
-        }
-      }
-
-      if (parts.length < 4) {
-        throw new Error('Nie udało się rozpoznać formatu. Najlepiej wklej dane z tabulatorami między polami.');
+      if (parts.length !== 4 || parts.some(v => !v)) {
+        throw new Error('Nie udało się rozpoznać formatu. Użyj dokładnie: data godzina[TAB]gospodarz[TAB]gość[TAB]adres');
       }
 
       const start = new Date(parts[0].replace(' ', 'T'));
@@ -260,9 +253,8 @@
 
       const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
       const homeTeam = parts[1].trim();
-      let awayPart = parts[2].trim();
-      awayPart = awayPart.replace(/^(?:-|–|—)\s*/, '').trim();
-      const title = `${homeTeam} - ${awayPart}`.replace(/\s+/g, ' ').trim();
+      const awayTeam = parts[2].trim();
+      const title = `${homeTeam} - ${awayTeam}`.replace(/\s+/g, ' ').trim();
       const location = parts.slice(3).join(' ').trim();
       const description = descriptionInput.value.trim()
         ? descriptionInput.value.trim() + '\n\nŹródło: ' + text
