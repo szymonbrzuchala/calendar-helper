@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dodaj Mecz z PZPN</title>
+  <meta name="description" content="Generator wydarzeń do kalendarza z wklejonych danych meczowych i wiadomości e-mail PZPN. Tworzy wydarzenie 2-godzinne oraz plik ICS z przypomnieniem 2 godziny przed startem." />
+  <title>Generator wydarzeń do kalendarza</title>
   <style>
     :root {
       --bg: #f7f6f2;
@@ -14,11 +15,13 @@
       --border: #d8d4cb;
       --primary: #01696f;
       --primary-hover: #0c4e54;
-      --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      --error: #9b1c39;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .08);
       --radius: 18px;
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -62,20 +65,18 @@
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 260px;
       resize: vertical;
+      white-space: pre-wrap;
     }
 
     label {
       display: block;
       margin: 14px 0 8px;
-      font-weight: 600;
+      font-weight: 700;
     }
 
-    .grid {
-      display: grid;
-      gap: 14px;
-    }
+    .grid { display: grid; gap: 14px; }
 
     .actions {
       display: flex;
@@ -99,18 +100,9 @@
       cursor: pointer;
     }
 
-    .primary {
-      background: var(--primary);
-      color: #fff;
-    }
-
+    .primary { background: var(--primary); color: #fff; }
     .primary:hover { background: var(--primary-hover); }
-
-    .secondary {
-      background: var(--surface-2);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
+    .secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 
     .preview {
       display: grid;
@@ -122,21 +114,18 @@
       border: 1px solid var(--border);
     }
 
-    .row strong {
-      display: inline-block;
-      min-width: 115px;
-    }
+    .row strong { display: inline-block; min-width: 115px; }
 
     .hint {
-      font-size: 0.95rem;
+      font-size: .95rem;
       color: var(--muted);
       margin-top: 10px;
     }
 
     .error {
       margin-top: 14px;
-      color: #9b1c39;
-      font-weight: 600;
+      color: var(--error);
+      font-weight: 700;
     }
 
     code {
@@ -144,14 +133,21 @@
       padding: 2px 6px;
       border-radius: 8px;
     }
+
+    @media (max-width: 480px) {
+      .wrap { padding: 14px; }
+      .card { padding: 16px; }
+      .actions > * { width: 100%; }
+      .row strong { min-width: 0; display: block; margin-bottom: 2px; }
+    }
   </style>
-</head>
+<script type="text/javascript" nonce="0034e13cb13b4ab2ac30dcfc0a4" src="//local.adguard.org?ts=1789023220662&amp;type=content-script&amp;dmn=ppl-ai-code-interpreter-files.s3.amazonaws.com&amp;url=https%3A%2F%2Fppl-ai-code-interpreter-files.s3.amazonaws.com%2Fask-engine%2Fdirect-files%2F3adcc2f3ed6cb40b005d6b97c2537db0%2F7f8d94e2-82bf-4aa2-8883-a2b674eb6f7f%2F1bc04b52.html%3Fresponse-content-disposition%3Dattachment%253B%2520filename%253D%2522index.html%2522%253B%2520filename%252A%253DUTF-8%2527%2527index.html%26AWSAccessKeyId%3DASIA2F3EMEYEZBMNKDNU%26Signature%3Dm23bwkaJh%252BgYYBZ2VmfJ3qTHT%252FM%253D%26x-amz-security-token%3DIQoJb3JpZ2luX2VjELj%252F%252F%252F%252F%252F%252F%252F%252F%252F%252FwEaCXVzLWVhc3QtMSJHMEUCIQCbQlx5q4kaxORHXaRVB0ewkKLq8%252FYL8vZbjisNsHROMQIgei6c0%252BeVp6NKDDnEk4zIMvHogLGapOnkdXJn8BCwRgUq%252FAQIgf%252F%252F%252F%252F%252F%252F%252F%252F%252F%252FARABGgw2OTk3NTMzMDk3MDUiDGq7FevghfpKCj3bNyrQBJElrodRIurF8kIPSuKY50TEGbvOPq%252FuzUJLyTFiHtwWoiMmTHF9Tg31gQXdFDVfJenWP%252FSTfsFqGLfWYJIbQgnEC9txl7a1JRFVmz2bBVWHDCLRhbeKWVFPNnOuqi5NacD01jiHe4elacGhBRdepny1Q%252Fz5INIroHXvTqELxWYqNVQtL45WFUNchbtQKCcyRivKfo4JPZIB5cZlQ3%252FfuPSfCMfGYrzBUQ90G5qno0PFWF0hSHggda6nQeiQ9iGlVgKSU08IxxivCTlqkMbfKDciNtzhT7PcUXJE%252Bd48R%252FSAUf8X9JUxKu1bHMFsvVkZgUBfaAtrsIZjaCtN10ABkPQX20q1ntLvdWDRQwBc%252FMLgu1KGyqnoBwxkNhslp2hJTIcJgh1wC3AtiC3dczszcHKpfr4ZaJ%252BtehA5H5ingjk9y4qJ3OqKiwEjjBYzH2mO7FWMs9SQijOwIdZJSbXX09u9bYgjRfyY5xtV2vz5pU1dIUkpKTc5buzijtpn5TyeTOiicP3JMkeuXfqTXzjI1xavpoOu%252FBl2o%252B0U%252F8N7XpOhartc%252F2vSuWV7ZijyMJPzFCW1o%252B8R9ZO7mJgyfiem951M0pNDU2TES9XYnQlANV5JBhJTXwSmKd%252BbRrGda2enUL%252BDid5KXAZCLr7Q%252FSYM7bOF%252FSt7cuHDhPwvLvLuIc9XLLLZ1Cumai4ICT%252BGe%252FhVAvMBqmxHX6QLrQWqmADAHss8uFdvNTbrnd7pEYnbA2kl4ceIQxkT%252BtYy4P88Pr1ProxLnuZkIxuCHx8ICfKWXmowzruJ1QY6mAEPqfgublr9fORLKDskljqBasa235UvNnqaUCbjP1hfumZ0GXpTsxQsKOWjfIX58l0jaJoK4xo5be9GMph%252BHpNMzCQ9OK3it4UXseyoGtQPnLVDzcc2azWTiffnbScElwcRWkvu0XasJ7dhw2kxldUWJb2eqmUnTnORrLQ32ThYGiZLuBS1GmqRyECL%252BpLkaY0vSQeabyZxPg%253D%253D%26Expires%3D1789028806&amp;app=chrome.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script><script type="text/javascript" nonce="0034e13cb13b4ab2ac30dcfc0a4" src="//local.adguard.org?ts=1789023220662&amp;name=AdGuard%20Extra&amp;name=AdGuard%20Popup%20Blocker&amp;type=user-script"></script></head>
 <body>
   <main class="wrap">
     <section class="card">
       <h1>Generator wydarzeń do kalendarza</h1>
-      <p>Wklej linię z terminarza, a aplikacja przygotuje wydarzenie trwające 2 godziny oraz plik ICS z przypomnieniem 2 godziny przed startem.</p>
-      <p class="muted">Działa jako statyczna strona, nadaje się do używania na komputerze a także z telefonu.</p>
+      <p>Wklej dane meczu lub całą treść wiadomości z Extranetu PZPN. Aplikacja utworzy wydarzenie trwające 2 godziny oraz plik ICS z przypomnieniem 2 godziny przed początkiem.</p>
+      <p class="muted">Działa jako statyczna strona — nadaje się do GitHub Pages i do używania na telefonie.</p>
     </section>
 
     <section class="card">
@@ -167,7 +163,10 @@ Gospodarz
 Drużyna gości
 Gość
 Miejsce
-Adres 2, Wroclaw"></textarea>
+Adres 2, Wroclaw
+
+Format 3 — treść maila z Extranetu PZPN:
+Informujemy o wpisaniu do obsady meczu: Sezon : 2026/2027 Rozgrywka : CLJ U-15 &quot;gr. C&quot; Kolejka : 4 Drużyny: ŚLĄSK WROCŁAW - GKS PIAST GLIWICE S.A. Data: 2026-09-12 13:00 Miejsce: Na Niskich Łąkach (Wrocław, Na Niskich Łąkach 8) Funkcja: Sędzia asystent System Extranet-PZPN"></textarea>
 
       <div class="grid" style="margin-top:14px;">
         <div>
@@ -177,12 +176,12 @@ Adres 2, Wroclaw"></textarea>
       </div>
 
       <div class="actions">
-        <button class="primary" id="parseBtn">Przygotuj wydarzenie</button>
+        <button class="primary" id="parseBtn" type="button">Przygotuj wydarzenie</button>
         <a class="button secondary" id="googleBtn" href="#">Otwórz w Google Calendar</a>
-        <button class="secondary" id="icsBtn">Pobierz ICS z reminderem 2h</button>
+        <button class="secondary" id="icsBtn" type="button">Pobierz ICS z reminderem 2h</button>
       </div>
 
-      <div class="hint">Obsługiwane formaty: <code>data godzina[TAB]gospodarz[TAB]gość[TAB]adres</code> oraz wersja wieloliniowa z polami <code>Data</code>, <code>Drużyna gospodarzy</code>, <code>Drużyna gości</code> i <code>Miejsce</code>. Tytuł wydarzenia zostanie utworzony automatycznie jako <code>gospodarz - gość</code>.</div>
+      <div class="hint">Obsługiwane formaty: <code>data godzina[TAB]gospodarz[TAB]gość[TAB]adres</code>, format wieloliniowy oraz pełna treść maila z polami <code>Drużyny:</code>, <code>Data:</code> i <code>Miejsce:</code>. Tytuł zawsze powstaje jako <code>gospodarz - gość</code>.</div>
       <div id="error" class="error" aria-live="polite"></div>
 
       <div id="preview" class="preview" hidden>
@@ -222,17 +221,13 @@ Adres 2, Wroclaw"></textarea>
       return String(n).padStart(2, '0');
     }
 
-    function toGoogleDate(date) {
+    function toCalendarDate(date) {
       return date.getFullYear() +
         pad(date.getMonth() + 1) +
         pad(date.getDate()) + 'T' +
         pad(date.getHours()) +
         pad(date.getMinutes()) +
         pad(date.getSeconds());
-    }
-
-    function toIcsDate(date) {
-      return toGoogleDate(date);
     }
 
     function formatLocal(date) {
@@ -245,6 +240,43 @@ Adres 2, Wroclaw"></textarea>
       }).format(date);
     }
 
+    function cleanField(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function parsePzpnEmail(text) {
+      const teamsMatch = text.match(/Drużyny\s*:\s*([\s\S]*?)\s+Data\s*:/i);
+      const dateMatch = text.match(/Data\s*:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})/i);
+      const locationMatch = text.match(/Miejsce\s*:\s*([\s\S]*?)\s+Funkcja\s*:/i);
+
+      if (!teamsMatch || !dateMatch || !locationMatch) {
+        return null;
+      }
+
+      const teamsRaw = cleanField(teamsMatch[1]);
+      const separator = teamsRaw.match(/\s+(?:-|–|—)\s+/);
+      if (!separator) {
+        throw new Error('Mail został rozpoznany, ale nie udało się rozdzielić drużyny gospodarzy i gości w polu „Drużyny”.');
+      }
+
+      const [homeTeam, awayTeam] = teamsRaw.split(/\s+(?:-|–|—)\s+/, 2).map(cleanField);
+      const location = cleanField(locationMatch[1]);
+      const functionMatch = text.match(/Funkcja\s*:\s*([\s\S]*?)\s+System\s+Extranet-PZPN/i);
+      const role = functionMatch ? cleanField(functionMatch[1]) : '';
+
+      if (!homeTeam || !awayTeam || !location) {
+        throw new Error('W mailu brakuje danych meczu: gospodarza, gościa albo miejsca.');
+      }
+
+      return {
+        dateValue: dateMatch[1],
+        homeTeam,
+        awayTeam,
+        location,
+        role
+      };
+    }
+
     function parseLine(input) {
       const text = input.trim();
       if (!text) {
@@ -255,28 +287,32 @@ Adres 2, Wroclaw"></textarea>
       let homeTeam = '';
       let awayTeam = '';
       let location = '';
+      let role = '';
 
-      const lines = text.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
-      const normalized = lines.map(v => v.toLowerCase());
-
-      const dataIndex = normalized.indexOf('data');
-      const homeIndex = normalized.indexOf('drużyna gospodarzy');
-      const awayIndex = normalized.indexOf('drużyna gości');
-      const locationIndex = normalized.indexOf('miejsce');
-
-      const hasLabeledFormat = dataIndex !== -1 && homeIndex !== -1 && awayIndex !== -1 && locationIndex !== -1;
-
-      if (hasLabeledFormat) {
-        dateValue = lines[dataIndex + 1] || '';
-        homeTeam = lines[homeIndex + 1] || '';
-        awayTeam = lines[awayIndex + 1] || '';
-        location = lines[locationIndex + 1] || '';
+      const pzpnData = parsePzpnEmail(text);
+      if (pzpnData) {
+        ({ dateValue, homeTeam, awayTeam, location, role } = pzpnData);
       } else {
-        const parts = text.split('\t').map(v => v.trim());
-        if (parts.length !== 4 || parts.some(v => !v)) {
-          throw new Error('Nie udało się rozpoznać formatu. Użyj formatu TAB albo wersji wieloliniowej z polami Data, Drużyna gospodarzy, Drużyna gości, Miejsce.');
+        const lines = text.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
+        const normalized = lines.map(v => v.toLowerCase());
+        const dataIndex = normalized.indexOf('data');
+        const homeIndex = normalized.indexOf('drużyna gospodarzy');
+        const awayIndex = normalized.indexOf('drużyna gości');
+        const locationIndex = normalized.indexOf('miejsce');
+        const hasLabeledFormat = dataIndex !== -1 && homeIndex !== -1 && awayIndex !== -1 && locationIndex !== -1;
+
+        if (hasLabeledFormat) {
+          dateValue = lines[dataIndex + 1] || '';
+          homeTeam = lines[homeIndex + 1] || '';
+          awayTeam = lines[awayIndex + 1] || '';
+          location = lines[locationIndex + 1] || '';
+        } else {
+          const parts = text.split('\t').map(v => v.trim());
+          if (parts.length !== 4 || parts.some(v => !v)) {
+            throw new Error('Nie udało się rozpoznać formatu. Wklej dane w formacie TAB, wieloliniowym albo całą treść maila z Extranetu PZPN.');
+          }
+          [dateValue, homeTeam, awayTeam, location] = parts;
         }
-        [dateValue, homeTeam, awayTeam, location] = parts;
       }
 
       const start = new Date(dateValue.replace(' ', 'T'));
@@ -284,24 +320,29 @@ Adres 2, Wroclaw"></textarea>
         throw new Error('Niepoprawna data lub godzina. Oczekiwany format: RRRR-MM-DD GG:MM');
       }
 
+      homeTeam = cleanField(homeTeam);
+      awayTeam = cleanField(awayTeam);
+      location = cleanField(location);
+
       if (!homeTeam || !awayTeam || !location) {
         throw new Error('Brakuje jednej z wymaganych wartości: gospodarz, gość lub adres.');
       }
 
       const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-      const title = `${homeTeam.trim()} - ${awayTeam.trim()}`.replace(/\s+/g, ' ').trim();
-      const description = descriptionInput.value.trim()
-        ? descriptionInput.value.trim() + '\n\nŹródło: ' + text
-        : 'Źródło: ' + text;
+      const title = `${homeTeam} - ${awayTeam}`;
+      const extra = cleanField(descriptionInput.value);
+      const roleText = role ? `Funkcja: ${role}` : '';
+      const metadata = [roleText, `Źródło: ${text}`].filter(Boolean).join('\n\n');
+      const description = extra ? `${extra}\n\n${metadata}` : metadata;
 
-      return { start, end, title, location: location.trim(), description };
+      return { start, end, title, location, description };
     }
 
     function buildGoogleUrl(event) {
       const params = new URLSearchParams({
         action: 'TEMPLATE',
         text: event.title,
-        dates: `${toGoogleDate(event.start)}/${toGoogleDate(event.end)}`,
+        dates: `${toCalendarDate(event.start)}/${toCalendarDate(event.end)}`,
         details: event.description,
         location: event.location
       });
@@ -309,18 +350,17 @@ Adres 2, Wroclaw"></textarea>
     }
 
     function buildIcs(event) {
-      const uid = `${Date.now()}@calendar-app.local`;
-      const dtstamp = toIcsDate(new Date());
+      const uid = `${Date.now()}@calendar-helper.local`;
       return [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Szymon Calendar Helper//PL',
+        'PRODID:-//Calendar Helper//PL',
         'CALSCALE:GREGORIAN',
         'BEGIN:VEVENT',
         `UID:${uid}`,
-        `DTSTAMP:${dtstamp}`,
-        `DTSTART:${toIcsDate(event.start)}`,
-        `DTEND:${toIcsDate(event.end)}`,
+        `DTSTAMP:${toCalendarDate(new Date())}`,
+        `DTSTART:${toCalendarDate(event.start)}`,
+        `DTEND:${toCalendarDate(event.end)}`,
         `SUMMARY:${escapeIcs(event.title)}`,
         `DESCRIPTION:${escapeIcs(event.description)}`,
         `LOCATION:${escapeIcs(event.location)}`,
@@ -340,7 +380,6 @@ Adres 2, Wroclaw"></textarea>
       googleBtn.href = buildGoogleUrl(currentEvent);
       googleBtn.target = '_blank';
       googleBtn.rel = 'noopener noreferrer';
-
       previewTitle.textContent = currentEvent.title;
       previewStart.textContent = formatLocal(currentEvent.start);
       previewEnd.textContent = formatLocal(currentEvent.end);
@@ -357,11 +396,11 @@ Adres 2, Wroclaw"></textarea>
       }
     });
 
-    googleBtn.addEventListener('click', (e) => {
+    googleBtn.addEventListener('click', (event) => {
       try {
         refresh();
       } catch (err) {
-        e.preventDefault();
+        event.preventDefault();
         preview.hidden = true;
         errorBox.textContent = err.message;
       }
@@ -370,32 +409,25 @@ Adres 2, Wroclaw"></textarea>
     icsBtn.addEventListener('click', () => {
       try {
         refresh();
-        const ics = buildIcs(currentEvent);
-        const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+        const blob = new Blob([buildIcs(currentEvent)], { type: 'text/calendar;charset=utf-8' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const link = document.createElement('a');
         const safeName = currentEvent.title
           .toLowerCase()
           .replace(/[^a-z0-9ąćęłńóśźż\- ]/gi, '')
           .replace(/\s+/g, '-')
           .slice(0, 60) || 'wydarzenie';
-        a.href = url;
-        a.download = `${safeName}.ics`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        link.href = url;
+        link.download = `${safeName}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } catch (err) {
         preview.hidden = true;
         errorBox.textContent = err.message;
       }
     });
-
-    try {
-      refresh();
-    } catch (err) {
-      errorBox.textContent = err.message;
-    }
   </script>
 </body>
 </html>
